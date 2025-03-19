@@ -143,11 +143,194 @@ Range: Must be a value between 0 and 1 (e.g., 0.95 means 95% confidence).
 
 ### 4. Output
 
-The tool generates an output file containing:
-- **dN/dS ratios**
-- **Nucleotide diversity (piN, piS)**
-- **Allele frequencies**
-- **Bootstrap confidence intervals (if enabled)**
+## 1. General Columns
+
+### `Contig_name`
+- **Description**: The name of the contig (sequence) being analyzed.
+
+### `Status`
+- **Description**: Indicates whether the contig passed or failed the filtering criteria (e.g., gaps, frameshifts, etc.).
 
 ---
+
+## 2. SNP-Related Columns
+
+### `BiAllelic_SNP`
+- **Description**: Number of bi-allelic single nucleotide polymorphisms (SNPs) in the contig.
+- **Calculation**: Counts SNPs where exactly two alleles are present in the population. A SNP is a variation at a single position in the DNA sequence among individuals.
+At a specific position in the genome, one individual might have an A, while another individual might have a G.
+An allele is one of the possible variants at a specific position in the genome, at a SNP site, the possible alleles could be A, T, C, or G.
+When we say "two alleles are present in the population", it means that at that specific SNP site:
+Only two different nucleotides (e.g., A and G) are observed across all individuals in the population.
+
+### `TriAllelic_SNP`
+- **Description**: Number of tri-allelic SNPs in the contig.
+- **Calculation**: Counts SNPs where exactly three alleles are present in the population.
+
+### `QuadriAllelic_SNP`
+- **Description**: Number of quadri-allelic SNPs in the contig.
+- **Calculation**: Counts SNPs where exactly four alleles are present in the population.
+
+---
+
+## 3. Codon and Fixation Columns
+
+### `nN`
+- **Description**: Number of non-synonymous sites in the contig. Non-synonymous sites (nN): Positions in a codon where a mutation changes the amino acid in the protein.
+- **Calculation**: Estimated based on the codon sequence and the genetic code.
+
+### `nS`
+- **Description**: Number of synonymous sites in the contig. Synonymous sites (nS): Positions in a codon where a mutation does not change the amino acid (silent mutation).
+- **Calculation**: Estimated based on the codon sequence and the genetic code.
+
+-  **Codon Analysis**:
+  The tool examines each codon in the sequence and determines which positions (1st, 2nd, or 3rd) are synonymous or non-synonymous based on the genetic code.
+        For example: In the codon ATG (which codes for Methionine):
+                The 3rd position (G) is synonymous because changing it to A, C, or T still codes for Methionine.
+                The 1st and 2nd positions are non-synonymous because changes here can alter the amino acid.
+
+    **Counting Sites**:
+        For each codon, the tool counts how many of its positions are synonymous (nS) and how many are non-synonymous (nN).
+        These counts are summed across all codons in the contig to get the total nN and nS.
+   
+    **Normalization**:
+        The counts are often normalized by the total number of codons to account for differences in sequence length.
+
+### `fixN`
+- **Description**: Number of fixed non-synonymous differences between the ingroup and outgroup.
+- **Calculation**: Compares the ingroup and outgroup sequences to identify fixed differences.
+
+### `fixS`
+- **Description**: Number of fixed synonymous differences between the ingroup and outgroup.
+- **Calculation**: Compares the ingroup and outgroup sequences to identify fixed differences.
+
+ ### `Fixed Differences`
+    Fixed differences are mutations that are fixed (i.e., present in all individuals of the ingroup but absent in the outgroup, or vice versa).
+    These represent genetic changes that have become permanent in one group relative to the other.
+
+**Analysis**
+    **Identifying Fixed Differences**:
+        The tool compares the ingroup sequences (focal species) to the outgroup sequences (external species) at each codon position.
+        For each codon:
+            If the ingroup has a different amino acid than the outgroup, and this difference is consistent across all ingroup individuals, it is counted as a fixed non-synonymous difference (fixN).
+            If the ingroup has a different nucleotide than the outgroup, but the amino acid remains the same, it is counted as a fixed synonymous difference (fixS).
+    **Counting Differences**:
+        The tool counts the total number of fixed non-synonymous (fixN) and synonymous (fixS) differences across all codons.
+
+**Example**: 
+Input Data
+    Ingroup Sequence: ATG CTA GGA (Methionine, Leucine, Glycine)
+    Outgroup Sequence: ATG CTG GGA (Methionine, Leucine, Glycine)
+
+Step 1: Calculate nN and nS
+    For each codon:
+        ATG:
+            Non-synonymous sites: 1st and 2nd positions.
+            Synonymous sites: 3rd position.
+        CTA:
+            Non-synonymous sites: 1st and 2nd positions.
+            Synonymous sites: 3rd position.
+        GGA:
+            Non-synonymous sites: 1st and 2nd positions.
+            Synonymous sites: 3rd position.
+    Total nN = 6 (2 per codon × 3 codons).
+    Total nS = 3 (1 per codon × 3 codons).
+
+Step 2: Calculate fixN and fixS
+    Compare ingroup and outgroup sequences:
+        ATG vs. ATG: No difference.
+        CTA vs. CTG: Difference at the 3rd position (A → G).
+            This is a synonymous difference because both codons code for Leucine.
+        GGA vs. GGA: No difference.
+    Total fixN = 0 (no non-synonymous differences).
+    Total fixS = 1 (one synonymous difference).
+
+---
+
+## 4. Polymorphism Columns
+
+### `polymN0.0`
+- **Description**: Number of polymorphic non-synonymous sites at a frequency threshold of `0.0` (all polymorphic sites).
+- **Calculation**: Counts non-synonymous sites with any level of polymorphism in the ingroup.
+
+### `polymS0.0`
+- **Description**: Number of polymorphic synonymous sites at a frequency threshold of `0.0` (all polymorphic sites).
+- **Calculation**: Counts synonymous sites with any level of polymorphism in the ingroup.
+
+### `polymN0.2`
+- **Description**: Number of polymorphic non-synonymous sites at a frequency threshold of `0.2`.
+- **Calculation**: Counts non-synonymous sites where the minor allele frequency (MAF) is ≥ `0.2`.
+
+### `polymS0.2`
+- **Description**: Number of polymorphic synonymous sites at a frequency threshold of `0.2`.
+- **Calculation**: Counts synonymous sites where the minor allele frequency (MAF) is ≥ `0.2`.
+
+---
+
+## 5. McDonald-Kreitman (MK) Test Columns
+
+### `MK_nN`
+- **Description**: Number of non-synonymous sites used in the McDonald-Kreitman test.
+- **Calculation**: Derived from the comparison of fixed and polymorphic sites between ingroup and outgroup, sum of non-synonymous polymorphic and fixed sites.
+
+### `MK_nS`
+- **Description**: Number of synonymous sites used in the McDonald-Kreitman test.
+- **Calculation**: Derived from the comparison of fixed and polymorphic sites between ingroup and outgroup, sum of synonymous polymorphic and fixed sites.
+
+---
+
+## 6. GC Allele Frequency Columns
+
+### `GCalfreq<=0.125` to `GCalfreq<=1`
+- **Description**: Number of sites with GC allele frequencies falling into specific bins (e.g., `0-12.5%`, `12.5-25%`, ..., `87.5-100%`).
+- **Calculation**: Based on the `-gc_bin` parameter, the tool divides GC frequencies into bins and counts the number of sites in each bin.
+
+---
+
+## 7. Species-Specific Columns
+
+### `Ae_speltoides_nb_sequence`
+- **Description**: Number of sequences from the species *Ae. speltoides* in the contig.
+- **Calculation**: Counts sequences labeled with the species name *Ae. speltoides*.
+
+### `Ae_speltoides_nb_complete_site`
+- **Description**: Number of complete (non-gap, non-ambiguous) sites in *Ae. speltoides* sequences.
+- **Calculation**: Counts sites without gaps or `N` in *Ae. speltoides* sequences.
+
+### `Ae_speltoides_GC3`
+- **Description**: GC content at the third codon position in *Ae. speltoides* sequences.
+- **Calculation**: Calculates the proportion of G and C bases at the third codon position.
+
+### `Ae_speltoides_piN`
+- **Description**: Nucleotide diversity (π) at non-synonymous sites in *Ae. speltoides*.
+- **Calculation**: Measures genetic diversity based on non-synonymous SNPs.
+
+### `Ae_speltoides_piS`
+- **Description**: Nucleotide diversity (π) at synonymous sites in *Ae. speltoides*.
+- **Calculation**: Measures genetic diversity based on synonymous SNPs.
+
+### `Ae_speltoides_Fit`
+- **Description**: F-statistic for *Ae. speltoides*.
+- **Calculation**: Measures genetic differentiation between populations.
+The general formula for Fst​ is:
+FST=(HT−HS)/HT
+where:
+    HT​ = Total genetic diversity in the entire population (expected heterozygosity across all populations).
+    HS​ = Average genetic diversity within subpopulations.
+Interpretation
+    FST​=0 → No genetic differentiation (all populations are genetically identical).
+    FST close to 1 → Complete genetic differentiation (populations share no alleles).
+    FST between 0 and 1 → Some level of differentiation, with higher values indicating stronger genetic structuring.
+  
+### `Ae_speltoides_WeirCockerham84_Fit`
+- **Description**: F-statistic calculated using the Weir and Cockerham (1984) method for *Ae. speltoides*.
+- **Calculation**: A more refined method for estimating F<sub>ST</sub>.
+
+---
+
+## 8. 
+---
+
+
+
 
